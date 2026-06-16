@@ -1,0 +1,88 @@
+version: "3.9"
+
+services:
+  market-intelligence-agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: market-intelligence-agent
+    ports:
+      - "8007:8007"
+    volumes:
+      - market_data:/app/data
+      - market_output:/app/output
+      - market_models:/app/models
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+      - PRIVACY_MODE=${PRIVACY_MODE:-0}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - market_net
+
+  market-intelligence-agent-gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: market-intelligence-agent-gpu
+    profiles: ["gpu"]
+    ports:
+      - "8007:8007"
+    volumes:
+      - market_data:/app/data
+      - market_output:/app/output
+      - market_models:/app/models
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - PRIVACY_MODE=${PRIVACY_MODE:-0}
+      - HF_TOKEN=${HF_TOKEN:-}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - market_net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: market-ollama
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - market_ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    restart: unless-stopped
+    networks:
+      - market_net
+
+volumes:
+  market_data:
+    driver: local
+  market_output:
+    driver: local
+  market_models:
+    driver: local
+  market_ollama_models:
+    driver: local
+
+networks:
+  market_net:
+    driver: bridge

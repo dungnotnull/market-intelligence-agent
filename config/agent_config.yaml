@@ -1,0 +1,122 @@
+agent:
+  name: "market-intelligence-agent"
+  version: "1.0.0"
+  cluster: "F"
+
+server:
+  host: "0.0.0.0"
+  port: 8007
+  log_level: "INFO"
+
+output:
+  dir: "output"
+  max_reports: 1000
+
+data_collection:
+  timeout_seconds: 20
+  max_sources_per_query: 30
+  min_unique_domains: 3
+  sources:
+    world_bank:
+      enabled: true
+      base_url: "https://api.worldbank.org/v2"
+      default_indicators:
+        - "NY.GDP.MKTP.CD"
+        - "NY.GDP.MKTP.KD.ZG"
+    arxiv:
+      enabled: true
+      categories: ["cs.IR", "cs.AI", "stat.AP", "cs.LG"]
+      max_results: 10
+    semantic_scholar:
+      enabled: true
+      max_results: 8
+    duckduckgo:
+      enabled: true
+      max_results: 8
+
+framework_analysis:
+  default_frameworks: ["SWOT", "Porter"]
+  auto_select: true
+  max_evidence_items: 15
+  min_confidence_threshold: 0.4
+  conflict_detection: true
+  llm_retry_attempts: 3
+
+trend_forecasting:
+  method: "prophet"
+  fallback_method: "arima"
+  forecast_years: 3
+  confidence_interval: 0.80
+  min_data_points: 2
+  arima_order: [2, 1, 2]
+
+report:
+  min_word_count: 1500
+  max_word_count: 8000
+  min_citations: 3
+  include_confidence_disclosure: true
+  include_conflicts: true
+  sections:
+    - "executive_summary"
+    - "market_forecast"
+    - "strategic_analysis"
+    - "recommendations"
+    - "sources"
+    - "confidence_limitations"
+
+llm:
+  provider_chain: ["claude", "openai", "ollama"]
+  claude_model: "claude-opus-4-8"
+  openai_model: "gpt-4o"
+  ollama_model: "llama3"
+  max_tokens:
+    framework_selection: 300
+    swot: 1500
+    porter: 1200
+    pestel: 1500
+    executive_summary: 600
+    recommendations: 600
+    metric_extraction: 400
+  retry_delays: [1, 2, 4]
+  privacy_mode: false
+
+hf_models:
+  bge_large:
+    model_id: "BAAI/bge-large-en-v1.5"
+    task: "text-embedding"
+    dim: 1024
+  minilm:
+    model_id: "sentence-transformers/all-MiniLM-L6-v2"
+    task: "text-embedding"
+    dim: 384
+  bge_reranker:
+    model_id: "BAAI/bge-reranker-large"
+    task: "reranking"
+  bart_cnn:
+    model_id: "facebook/bart-large-cnn"
+    task: "summarization"
+    max_length: 150
+  cache_dir: "models"
+  idle_unload_seconds: 600
+
+knowledge_updater:
+  schedule: "weekly"
+  cron: "0 2 * * 0"
+  arxiv_categories: ["cs.IR", "cs.AI", "stat.AP", "cs.LG", "econ.GN"]
+  max_papers_per_run: 10
+  min_relevance_score: 0.3
+  recency_weight: 0.6
+  relevance_weight: 0.4
+
+memory:
+  db_path: "data/market_intelligence.db"
+  max_analyses_retained: 1000
+  max_sources_per_analysis: 50
+
+quality_gates:
+  min_sources: 3
+  min_word_count: 1500
+  min_citations: 3
+  require_framework: true
+  require_forecast: false
+  max_low_confidence_claims: 3
